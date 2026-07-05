@@ -1,0 +1,14 @@
+{
+  "name": "flywheel",
+  "description": "flywheel 루프 엔지니어링 하니스 마켓플레이스",
+  "owner": {
+    "name": "hhamja"
+  },
+  "plugins": [
+    {
+      "name": "flywheel",
+      "source": "./",
+      "description": "루프 엔지니어링 하니스 — 인터랙티브(Stop hook) + 무인(run.sh) 하이브리드 루프"
+    }
+  ]
+}
