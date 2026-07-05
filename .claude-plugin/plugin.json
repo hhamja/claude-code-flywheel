@@ -1,6 +1,6 @@
 {
   "name": "flywheel",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "루프 엔지니어링 하니스 — 프롬프트하는 사람을 프롬프트하는 시스템으로. 어떤 프로젝트든 /flywheel:init 한 번으로 자가 수정 루프를 심는다.",
   "author": {
     "name": "hhamja"
