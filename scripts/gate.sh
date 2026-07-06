@@ -41,6 +41,24 @@ mkdir -p "$FW/local"
 
 # ── 공용 헬퍼 ────────────────────────────────────────────────────────────────
 
+# policies.env 는 source 하지 않는다 — source 는 파일 전체를 실행하므로 신뢰할 수 없는
+# 저장소에서 임의 코드 실행(RCE) 위험이 있다. 이 파서는 문자열 처리만 하며 값 안의
+# $(...)·백틱·${...} 를 절대 평가하지 않는다. (VERIFY_CMD 값은 done 검증 시에만 실행됨)
+read_policy() { # <파일> <KEY> — 스칼라 값만 안전 추출
+  local file="$1" key="$2" line val
+  [[ -f "$file" ]] || return 0
+  line="$(grep -E "^[[:space:]]*${key}=" "$file" 2>/dev/null | head -1)"
+  [[ -n "$line" ]] || return 0
+  val="${line#*=}"
+  val="${val#"${val%%[![:space:]]*}"}"
+  case "$val" in
+    '"'*) val="${val#\"}"; val="${val%%\"*}" ;;
+    "'"*) val="${val#\'}"; val="${val%%\'*}" ;;
+    *)    val="${val%%[[:space:]#]*}" ;;
+  esac
+  printf '%s' "$val"
+}
+
 # 베이스라인 커밋(직전 통과 사이클의 HEAD). 없거나 유실(rebase 등)이면 현재 HEAD 로 리셋.
 baseline_head() {
   local base=""
@@ -218,11 +236,9 @@ check_done() {
   dirty="$(git status --porcelain=v1 || true)"
   [[ -n "$dirty" ]] && violations+="GATE[DONE]: 미커밋 변경이 남아 있습니다 — 완료는 커밋으로만 인정됩니다.
 "
-  # 전역 품질 게이트 — policies.env 는 셸 env 파일이므로 서브셸에서 source 해 정확히 읽는다
-  local verify_cmd=""
-  if [[ -f "$FW/policies.env" ]]; then
-    verify_cmd="$(bash -c "source '$FW/policies.env' 2>/dev/null; printf '%s' \"\${VERIFY_CMD:-}\"")"
-  fi
+  # 전역 품질 게이트 — policies.env 를 source 하지 않고 값만 안전 추출한다 (RCE 방지)
+  local verify_cmd
+  verify_cmd="$(read_policy "$FW/policies.env" VERIFY_CMD)"
   if [[ -n "$verify_cmd" ]]; then
     local out rc
     out="$(bash -c "$verify_cmd" 2>&1)"

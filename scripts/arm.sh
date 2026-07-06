@@ -12,6 +12,23 @@ cd "$PROJECT_ROOT"
 STATE=".claude/flywheel.local.md"
 FW=".flywheel"
 
+# policies.env 는 source 하지 않는다 — source 는 파일 전체를 실행하므로 신뢰할 수 없는
+# 저장소에서 임의 코드 실행(RCE) 위험이 있다. 이 파서는 문자열 처리만 한다.
+read_policy() { # <파일> <KEY> — 스칼라 값만 안전 추출
+  local file="$1" key="$2" line val
+  [[ -f "$file" ]] || return 0
+  line="$(grep -E "^[[:space:]]*${key}=" "$file" 2>/dev/null | head -1)"
+  [[ -n "$line" ]] || return 0
+  val="${line#*=}"
+  val="${val#"${val%%[![:space:]]*}"}"
+  case "$val" in
+    '"'*) val="${val#\"}"; val="${val%%\"*}" ;;
+    "'"*) val="${val#\'}"; val="${val%%\'*}" ;;
+    *)    val="${val%%[[:space:]#]*}" ;;
+  esac
+  printf '%s' "$val"
+}
+
 # ── 해제 ─────────────────────────────────────────────────────────────────────
 if [[ "${1:-}" == "--disarm" ]]; then
   if [[ -f "$STATE" ]]; then
@@ -74,7 +91,7 @@ done
 [[ "$MAX_CYCLES" =~ ^[0-9]+$ ]] || { echo "ERROR: --max-cycles 는 정수여야 합니다"; exit 1; }
 [[ "$MAX_HOURS" =~ ^[0-9]+$ ]] || { echo "ERROR: --max-hours 는 정수여야 합니다"; exit 1; }
 
-DISTILL_EVERY="$(bash -c "source '$FW/policies.env' 2>/dev/null; printf '%s' \"\${DISTILL_EVERY:-5}\"")"
+DISTILL_EVERY="$(read_policy "$FW/policies.env" DISTILL_EVERY)"
 [[ "$DISTILL_EVERY" =~ ^[0-9]+$ ]] || DISTILL_EVERY=5
 
 # ── 상태 파일 생성 ───────────────────────────────────────────────────────────

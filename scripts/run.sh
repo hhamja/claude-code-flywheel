@@ -42,16 +42,45 @@ while (( $# > 0 )); do
 done
 
 # ── 정책 로드 (사람 게이트 파일) ─────────────────────────────────────────────
-[[ -f "$FW/policies.env" ]] && source "$FW/policies.env"
-MAX_CYCLES="${MAX_CYCLES_ARG:-${MAX_CYCLES:-25}}"
-MAX_HOURS="${MAX_HOURS:-12}"
-MAX_RETRIES="${MAX_RETRIES:-2}"
-TIMEOUT_S="${TIMEOUT_S:-900}"
-AUTO_COMMIT="${AUTO_COMMIT:-true}"
-DISTILL_EVERY="${DISTILL_EVERY:-5}"
-AUDIT="${AUDIT:-deterministic}"
-WORKER="${WORKER_ARG:-${FLYWHEEL_WORKER:-${WORKER_CMD:-claude -p --dangerously-skip-permissions}}}"
+# policies.env 는 source 하지 않는다 — source 는 파일 전체를 셸로 실행하므로
+# 신뢰할 수 없는 저장소를 클론해 루프를 돌리면 임의 코드 실행(RCE)이 된다.
+# 아래 파서는 문자열 처리만 하며 값 안의 $(...)·백틱·${...} 를 절대 평가하지 않는다.
+# (VERIFY_CMD/WORKER_CMD 값은 의도된 실행 지점에서만 bash -c 로 실행된다.)
+read_policy() { # <파일> <KEY> — 스칼라 값만 안전 추출
+  local file="$1" key="$2" line val
+  [[ -f "$file" ]] || return 0
+  line="$(grep -E "^[[:space:]]*${key}=" "$file" 2>/dev/null | head -1)"
+  [[ -n "$line" ]] || return 0
+  val="${line#*=}"
+  val="${val#"${val%%[![:space:]]*}"}"              # 앞쪽 공백 제거
+  case "$val" in
+    '"'*) val="${val#\"}"; val="${val%%\"*}" ;;     # "..." 안쪽
+    "'"*) val="${val#\'}"; val="${val%%\'*}" ;;     # '...' 안쪽
+    *)    val="${val%%[[:space:]#]*}" ;;            # 첫 공백/주석 전까지
+  esac
+  printf '%s' "$val"
+}
+
+POL="$FW/policies.env"
+MAX_CYCLES="${MAX_CYCLES_ARG:-$(read_policy "$POL" MAX_CYCLES)}"
+MAX_HOURS="$(read_policy "$POL" MAX_HOURS)"
+MAX_RETRIES="$(read_policy "$POL" MAX_RETRIES)"
+TIMEOUT_S="$(read_policy "$POL" TIMEOUT_S)"
+AUTO_COMMIT="$(read_policy "$POL" AUTO_COMMIT)"
+DISTILL_EVERY="$(read_policy "$POL" DISTILL_EVERY)"
+AUDIT="$(read_policy "$POL" AUDIT)"
+POL_WORKER="$(read_policy "$POL" WORKER_CMD)"
+WORKER="${WORKER_ARG:-${FLYWHEEL_WORKER:-${POL_WORKER:-claude -p --dangerously-skip-permissions}}}"
 AUDITOR="${FLYWHEEL_AUDITOR:-claude -p --dangerously-skip-permissions --model opus}"
+
+# 형식 검증 — 숫자 정책은 정수만, 열거형은 허용값만 (손상·주입 시 기본값으로 복구)
+[[ "$MAX_CYCLES"    =~ ^[0-9]+$ ]] || MAX_CYCLES=25
+[[ "$MAX_HOURS"     =~ ^[0-9]+$ ]] || MAX_HOURS=12
+[[ "$MAX_RETRIES"   =~ ^[0-9]+$ ]] || MAX_RETRIES=2
+[[ "$TIMEOUT_S"     =~ ^[0-9]+$ ]] || TIMEOUT_S=900
+[[ "$DISTILL_EVERY" =~ ^[0-9]+$ ]] || DISTILL_EVERY=5
+[[ "$AUTO_COMMIT" == "true" || "$AUTO_COMMIT" == "false" ]] || AUTO_COMMIT=true
+[[ "$AUDIT" == "deterministic" || "$AUDIT" == "llm" ]] || AUDIT=deterministic
 
 # ── worktree 격리 모드: 격리 사본에서 재실행 ─────────────────────────────────
 RUNID="r$(date +%s)-$$"

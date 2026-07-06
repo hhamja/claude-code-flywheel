@@ -41,6 +41,8 @@ DISTILL_EVERY="$(fm distill_every)"
 
 # 2. 세션 격리 — 다른 세션의 루프는 건드리지 않는다
 HOOK_SESSION="$(echo "$HOOK_INPUT" | jq -r '.session_id // ""')"
+# 안전 문자만 허용 — 아래 sed 치환에 삽입되므로 인젝션을 차단한다 (세션 ID 는 UUID 형식)
+[[ "$HOOK_SESSION" =~ ^[A-Za-z0-9_-]+$ ]] || HOOK_SESSION=""
 if [[ "$STATE_SESSION" == "pending" ]] && [[ -n "$HOOK_SESSION" ]]; then
   # adopt-on-first-stop: 커맨드 실행 시점에 세션 ID 를 못 얻었을 때의 폴백
   TMP="$STATE.tmp.$$"
