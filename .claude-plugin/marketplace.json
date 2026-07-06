@@ -1,6 +1,6 @@
 {
   "name": "flywheel",
-  "description": "flywheel 루프 엔지니어링 하니스 마켓플레이스",
+  "description": "flywheel — a Loop Engineering harness marketplace for Claude Code",
   "owner": {
     "name": "hhamja"
   },
@@ -8,7 +8,7 @@
     {
       "name": "flywheel",
       "source": "./",
-      "description": "루프 엔지니어링 하니스 — 인터랙티브(Stop hook) + 무인(run.sh) 하이브리드 루프"
+      "description": "A Loop Engineering harness — a hybrid of an interactive (Stop hook) and an unattended (run.sh) self-correcting agent loop."
     }
   ]
 }

@@ -1,9 +1,23 @@
 {
   "name": "flywheel",
   "version": "0.1.2",
-  "description": "루프 엔지니어링 하니스 — 프롬프트하는 사람을 프롬프트하는 시스템으로. 어떤 프로젝트든 /flywheel:init 한 번으로 자가 수정 루프를 심는다.",
+  "description": "A Loop Engineering harness for Claude Code — turn a human prompting the agent into a system that prompts it. Plant a self-correcting agent loop into any project with one /flywheel:init.",
+  "homepage": "https://github.com/hhamja/claude-code-flywheel",
+  "repository": "https://github.com/hhamja/claude-code-flywheel",
+  "license": "MIT",
   "author": {
     "name": "hhamja"
   },
-  "keywords": ["loop-engineering", "harness", "agent-loop", "automation"]
+  "keywords": [
+    "claude-code",
+    "claude-code-plugin",
+    "loop-engineering",
+    "agentic-workflow",
+    "ai-agents",
+    "autonomous-agents",
+    "agent-loop",
+    "harness",
+    "automation",
+    "developer-tools"
+  ]
 }
